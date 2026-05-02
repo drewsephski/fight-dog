@@ -34,7 +34,7 @@ async function testLandingPageData() {
     
   } catch (error) {
     console.error('Error:', error)
-    console.error('Stack:', error.stack)
+    console.error('Stack:', error instanceof Error ? error.stack : 'No stack available')
   }
 }
 

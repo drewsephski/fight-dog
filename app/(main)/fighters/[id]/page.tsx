@@ -248,7 +248,9 @@ export default async function FighterPage({ params }: FighterPageProps) {
                 <div className="space-y-3">
                   {allFights.map((fight) => {
                     const opponent =
-                      fight.fighter1Id === dbFighter!.id ? fight.fighter2 : fight.fighter1
+                      fight.fighter1Id === dbFighter!.id
+                        ? (fight as { fighter2: { name: string } }).fighter2
+                        : (fight as { fighter1: { name: string } }).fighter1
                     const isWinner = fight.winnerId === dbFighter!.id
 
                     return (

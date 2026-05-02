@@ -4,6 +4,8 @@ import { PredictionCard } from '../_components/prediction-card'
 import { UserStatsDashboard } from '../_components/user-stats-dashboard'
 import Link from 'next/link'
 
+export const dynamic = 'force-dynamic'
+
 export default async function PredictionsPage() {
   const [predictionsResult, statsResult, upcomingResult] = await Promise.all([
     getUserPredictions(),

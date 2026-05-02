@@ -345,7 +345,7 @@ class EnhancedOddsApiClient {
     // Check if this is a title fight
     const isTitleFight = this.detectTitleFight(event.home_team, event.away_team) ||
                        config.name.toLowerCase().includes('title') ||
-                       (config.coMainEvent && 
+                       !!(config.coMainEvent && 
                         ((config.coMainEvent[0] === event.home_team && config.coMainEvent[1] === event.away_team) ||
                          (config.coMainEvent[0] === event.away_team && config.coMainEvent[1] === event.home_team)))
 

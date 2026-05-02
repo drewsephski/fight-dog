@@ -41,10 +41,10 @@ export default async function FightPage({ params }: FightPageProps) {
     id: f1.id,
     name: f1.name,
     imageUrl: f1.octagonData?.imgUrl || fight.fighter1.imageUrl,
-    division: f1.octagonData?.category || fight.fighter1.division,
+    division: f1.octagonData?.category || null,
     record: f1.octagonData
       ? `${f1.octagonData.wins}-${f1.octagonData.losses}${f1.octagonData.draws !== '0' ? `-${f1.octagonData.draws}` : ''}`
-      : fight.fighter1.record,
+      : null,
     stance: f1.octagonData?.fightingStyle,
     reach: f1.octagonData?.reach,
     nickname: f1.octagonData?.nickname,
@@ -61,10 +61,10 @@ export default async function FightPage({ params }: FightPageProps) {
     id: f2.id,
     name: f2.name,
     imageUrl: f2.octagonData?.imgUrl || fight.fighter2.imageUrl,
-    division: f2.octagonData?.category || fight.fighter2.division,
+    division: f2.octagonData?.category || null,
     record: f2.octagonData
       ? `${f2.octagonData.wins}-${f2.octagonData.losses}${f2.octagonData.draws !== '0' ? `-${f2.octagonData.draws}` : ''}`
-      : fight.fighter2.record,
+      : null,
     stance: f2.octagonData?.fightingStyle,
     reach: f2.octagonData?.reach,
     nickname: f2.octagonData?.nickname,
@@ -133,7 +133,7 @@ export default async function FightPage({ params }: FightPageProps) {
         </div>
 
         {/* Tale of the Tape */}
-        {(fighter1Display.octagonData || fighter2Display.octagonData) && (
+        {(fighter1Display.height || fighter2Display.height || fighter1Display.age || fighter2Display.age) && (
           <div className="bg-card border border-border rounded-sm p-6 sm:p-8 mb-8 sm:mb-12">
             <h2 className="font-black text-xl sm:text-2xl tracking-tight mb-6 sm:mb-8 text-center">
               TALE OF THE TAPE
