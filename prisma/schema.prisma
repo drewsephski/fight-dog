@@ -1,0 +1,295 @@
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["driverAdapters"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                String             @id @default(uuid())
+  clerkId           String             @unique
+  email             String             @unique
+  username          String?            @unique
+  displayName       String?
+  avatarUrl         String?
+  bio               String?
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+  picks             UserPick[]
+  watchlistItems    WatchlistItem[]
+  notificationPrefs NotificationPreference?
+  stats             UserStats?
+  following         Follow[]           @relation("Following")
+  followers         Follow[]           @relation("Followers")
+  ownedGroups       PredictionGroup[]
+  groupMemberships  GroupMember[]
+}
+
+model FighterCache {
+  id          String   @id @default(uuid())
+  externalId  String?  @unique
+  name        String   @unique
+  nickname    String?
+  record      String?
+  division    String?
+  stance      String?
+  reach       String?
+  height      String?
+  weight      String?
+  age         Int?
+  nationality String?
+  imageUrl    String?
+  wins        Int      @default(0)
+  losses      Int      @default(0)
+  draws       Int      @default(0)
+  noContests  Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  fightsAsFighter1 Fight[] @relation("Fighter1")
+  fightsAsFighter2 Fight[] @relation("Fighter2")
+  wonFights        Fight[] @relation("Winner")
+  picksFor         UserPick[] @relation("PickedFighter")
+  watchlistItems   WatchlistItem[]
+
+  @@index([name])
+  @@index([division])
+}
+
+model Event {
+  id          String   @id @default(uuid())
+  externalId  String?  @unique
+  name        String
+  date        DateTime
+  time        String?
+  location    String?
+  venue       String?
+  status      String   @default("upcoming")
+  promotion   String   @default("UFC")
+  isPpv       Boolean  @default(false)
+  imageUrl    String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  fights      Fight[]
+
+  @@index([date])
+  @@index([status])
+}
+
+model Fight {
+  id           String          @id @default(uuid())
+  externalId   String?         @unique
+  eventId      String
+  fighter1Id   String
+  fighter2Id   String
+  weightClass  String
+  isTitleFight Boolean         @default(false)
+  isMainEvent  Boolean         @default(false)
+  rounds       Int             @default(3)
+  position     Int             @default(0) // Fight position on card (1 = main event, 2 = co-main, etc.)
+  status       String          @default("upcoming")
+  winnerId     String?
+  method       String?
+  round        Int?
+  time         String?
+  oddsSnapshots OddsSnapshot[]
+  picks        UserPick[]
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
+
+  event    Event        @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  fighter1 FighterCache @relation("Fighter1", fields: [fighter1Id], references: [id])
+  fighter2 FighterCache @relation("Fighter2", fields: [fighter2Id], references: [id])
+  winner   FighterCache? @relation("Winner", fields: [winnerId], references: [id])
+
+  @@index([eventId])
+  @@index([status])
+  @@index([position])
+}
+
+model OddsSnapshot {
+  id            String   @id @default(uuid())
+  fightId       String
+  bookmakerKey  String
+  bookmakerName String
+  marketKey     String
+  fighter1Odds  Float
+  fighter2Odds  Float
+  fighter1Name  String
+  fighter2Name  String
+  lastUpdate    DateTime
+  commenceTime  DateTime
+  createdAt     DateTime @default(now())
+
+  fight Fight @relation(fields: [fightId], references: [id], onDelete: Cascade)
+
+  @@index([fightId])
+  @@index([bookmakerKey])
+  @@unique([fightId, bookmakerKey, marketKey])
+}
+
+model UserPick {
+  id                String    @id @default(uuid())
+  userId            String
+  fightId           String
+  predictedWinnerId String
+  confidence        Int       @default(3) // 1-5 stars
+  predictedMethod   String?   // KO_TKO, SUBMISSION, DECISION
+  predictedRound    Int?      // 1-5 (null for decision)
+  result            String?   // win, loss, pending, push
+  points            Int       @default(0)
+  isCorrect         Boolean?
+  beatTheOdds       Boolean?  // Did user pick underdog that won?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  resolvedAt        DateTime?
+
+  user            User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  fight           Fight        @relation(fields: [fightId], references: [id], onDelete: Cascade)
+  predictedWinner FighterCache @relation("PickedFighter", fields: [predictedWinnerId], references: [id])
+  comments        PredictionComment[]
+
+  @@unique([userId, fightId])
+  @@index([userId])
+  @@index([fightId])
+  @@index([result])
+}
+
+model WatchlistItem {
+  id         String   @id @default(uuid())
+  userId     String
+  fighterId  String?
+  eventId    String?
+  type       String   // fighter, event, fight
+  alertTypes String[] // new_fight, odds_change, result
+  createdAt  DateTime @default(now())
+
+  user    User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  fighter FighterCache? @relation(fields: [fighterId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([type])
+}
+
+model NotificationPreference {
+  id            String   @id @default(uuid())
+  userId        String   @unique
+  emailEnabled  Boolean  @default(true)
+  fightReminders Boolean @default(true)
+  oddsAlerts    Boolean  @default(false)
+  resultAlerts  Boolean  @default(true)
+  digestFrequency String @default("daily")
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model UserStats {
+  id                  String   @id @default(uuid())
+  userId              String   @unique
+  totalPicks          Int      @default(0)
+  correctPicks        Int      @default(0)
+  incorrectPicks      Int      @default(0)
+  pushPicks           Int      @default(0)
+  accuracy            Float    @default(0)
+  currentStreak       Int      @default(0)
+  bestStreak          Int      @default(0)
+  totalPoints         Int      @default(0)
+  underdogPicks       Int      @default(0)
+  underdogWins        Int      @default(0)
+  koTkoPicks          Int      @default(0)
+  koTkoWins           Int      @default(0)
+  submissionPicks     Int      @default(0)
+  submissionWins      Int      @default(0)
+  decisionPicks       Int      @default(0)
+  decisionWins        Int      @default(0)
+  methodAccuracy      Float    @default(0)
+  roundAccuracy       Float    @default(0)
+  rank                Int?     // Global leaderboard rank
+  tier                String   @default("Bronze") // Bronze, Silver, Gold, Platinum, Diamond
+  lastCalculatedAt    DateTime @default(now())
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([rank])
+  @@index([tier])
+  @@index([accuracy])
+}
+
+model Follow {
+  id          String   @id @default(uuid())
+  followerId  String
+  followingId String
+  createdAt   DateTime @default(now())
+
+  follower  User @relation("Following", fields: [followerId], references: [id], onDelete: Cascade)
+  following User @relation("Followers", fields: [followingId], references: [id], onDelete: Cascade)
+
+  @@unique([followerId, followingId])
+  @@index([followerId])
+  @@index([followingId])
+}
+
+model PredictionComment {
+  id         String   @id @default(uuid())
+  pickId     String
+  userId     String
+  content    String
+  likes      Int      @default(0)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  pick UserPick @relation(fields: [pickId], references: [id], onDelete: Cascade)
+
+  @@index([pickId])
+  @@index([userId])
+}
+
+model PredictionGroup {
+  id          String   @id @default(uuid())
+  name        String
+  description String?
+  isPrivate   Boolean  @default(false)
+  inviteCode  String?  @unique
+  createdById String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  createdBy User @relation(fields: [createdById], references: [id], onDelete: Cascade)
+  members   GroupMember[]
+
+  @@index([inviteCode])
+}
+
+model GroupMember {
+  id      String @id @default(uuid())
+  groupId String
+  userId  String
+  role    String @default("member") // admin, member
+  joinedAt DateTime @default(now())
+
+  group PredictionGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  user  User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([groupId, userId])
+  @@index([groupId])
+  @@index([userId])
+}
+
+model SyncLog {
+  id        String   @id @default(uuid())
+  type      String   // odds, events, fighters
+  status    String   // success, error, partial
+  details   String?
+  itemsSynced Int    @default(0)
+  createdAt DateTime @default(now())
+
+  @@index([type])
+  @@index([createdAt])
+}
